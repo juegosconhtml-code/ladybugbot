@@ -318,13 +318,21 @@
             document.getElementById('mission-text').textContent = `Misión: Pelota ${currentMission.n}`;
             document.getElementById('mission-text').style.color = currentMission.c;
 
-            // 2. Generar Arañas garantizando que haya camino
+            // 2. Generar Arañas garantizando que haya camino y estén más cerca que el objetivo
             obstacles = [];
             if(gameMode !== 'easy') {
                 let isValid = false;
+                let targetDist = dist(initialPos, currentMission);
+                let outerAttempts = 0;
                 
                 while(!isValid) {
                     obstacles = []; // Reiniciamos los obstáculos si falló la validación
+                    outerAttempts++;
+                    
+                    // Si le cuesta mucho encontrar hueco (después de 50 intentos), 
+                    // permitimos que se alejen un poco para no bloquear el juego.
+                    let maxSpiderDist = (outerAttempts > 50) ? targetDist : targetDist - 1;
+                    
                     while(obstacles.length < 3) {
                         let p = {x: rand(gridSize), y: rand(gridSize)};
                         
@@ -332,7 +340,10 @@
                         let isTarget = targets.some(t => t.x === p.x && t.y === p.y);
                         let isSpider = obstacles.some(o => o.x === p.x && o.y === p.y);
                         
-                        if(!isStart && !isTarget && !isSpider) {
+                        // Nueva regla: La araña debe estar a una distancia menor o igual a maxSpiderDist
+                        let isCloser = dist(initialPos, p) <= maxSpiderDist;
+                        
+                        if(!isStart && !isTarget && !isSpider && isCloser) {
                             obstacles.push(p);
                         }
                     }
