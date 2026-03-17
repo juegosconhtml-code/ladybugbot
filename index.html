@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Bee-Bot: El Jardín de las Arañas - Real</title>
+    <style>
+        :root {
+            --grid-size: 5;
+            /* REEMPLAZA ESTAS URL POR TUS ARCHIVOS DE IMAGEN REALES */
+            --grass-image: url('grass_texture.jpg');
+            --ladybug-red-real: url('red_ladybug.png');
+            --spider-real: url('spider.png');
+        }
+
+        body {
+            font-family: 'Comic Sans MS', cursive, sans-serif;
+            margin: 0; padding: 0;
+            width: 100vw; height: 100vh;
+            /* Fondo de césped realista para todo el jardín */
+            background-image: var(--grass-image);
+            background-size: cover;
+            display: flex; justify-content: center; align-items: center;
+            overflow: hidden;
+        }
+
+        /* --- PANTALLAS --- */
+        .overlay-screen {
+            position: absolute;
+            width: 100%; height: 100%;
+            background: rgba(139, 69, 19, 0.85); /* Tono marrón cálido y madera */
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 100; text-align: center;
+        }
+
+        .card {
+            background: white; padding: 5vmin; border-radius: 3vmin;
+            box-shadow: 0 2vmin 4vmin rgba(0,0,0,0.1);
+        }
+
+        .hidden { display: none !important; }
+
+        /* Botones de Selección */
+        .selection-grid { display: flex; gap: 2vw; flex-wrap: wrap; justify-content: center; margin-top: 3vmin; }
+        .btn-select {
+            background: #faf0e6; /* Color crema cálido */
+            border: 0.4vmin solid #5d4037; /* Madera oscura */
+            border-radius: 2vmin; padding: 2vmin; cursor: pointer;
+            transition: 0.2s; display: flex; flex-direction: column; align-items: center;
+            color: #5d4037; /* Texto de madera */
+        }
+        .btn-select:hover { transform: scale(1.05); border-color: #ff9800; } /* Resaltado dorado */
+        
+        /* Colores Mariquitas (filtros) */
+        .m-roja { filter: none; }
+        .m-verde { filter: hue-rotate(140deg); }
+        .m-azul { filter: hue-rotate(240deg); }
+        .m-amarilla { filter: hue-rotate(60deg) brightness(1.2); }
+        .m-blanca { filter: grayscale(1) brightness(2); }
+
+        /* --- INTERFAZ DE JUEGO --- */
+        #game-screen {
+            display: flex; width: 96vw; height: 96vh;
+            gap: 2vw; align-items: center; justify-content: space-between;
+        }
+
+        #board {
+            display: grid;
+            grid-template-columns: repeat(var(--grid-size), 1fr);
+            grid-template-rows: repeat(var(--grid-size), 1fr);
+            width: 85vmin; height: 85vmin;
+            /* Líneas de cuadrícula de madera y borde */
+            gap: 0.5vmin; background-color: #5d4037; /* Madera */
+            border: 1.25vmin solid #5d4037; /* Borde de madera más grueso */
+            border-radius: 2vmin;
+            padding: 1vmin; box-sizing: border-box;
+        }
+
+        .cell {
+            /* Cada celda tiene una textura de césped realista */
+            background-image: var(--grass-image);
+            background-size: cover;
+            border-radius: 1vmin;
+            display: flex; justify-content: center; align-items: center;
+            position: relative;
+        }
+
+        /* --- OBJETIVOS FOTORREALISTAS (PELOTAS) --- */
+        .target {
+            width: 80%; height: 80%;
+            border-radius: 50%;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.5);
+            transition: background 0.3s;
+        }
+
+        /* --- OBSTÁCULOS FOTORREALISTAS (ARAÑAS) --- */
+        .spider {
+            background-image: var(--spider-real);
+            background-size: contain;
+            background-position: center;
+            background-repeat: no-repeat;
+            width: 90%; height: 90%;
+            z-index: 10;
+        }
+
+        /* --- PERSONAJE FOTORREALISTA --- */
+        .robot { 
+            transition: transform 0.3s ease-out; 
+            position: absolute; z-index: 5;
+            background-size: contain;
+            background-position: center;
+            background-repeat: no-repeat;
+            width: 90%; height: 90%;
+            background-image: var(--ladybug-red-real); /* Imagen real */
+        }
+        .look-up    { transform: rotate(0deg); }
+        .look-right { transform: rotate(90deg); }
+        .look-down  { transform: rotate(180deg); }
+        .look-left  { transform: rotate(270deg); }
+
+        /* --- PANEL CONTROL CON TONOS MADERA Y DORADO --- */
+        #panel {
+            flex: 0 0 35%; height: 90vmin; background-color: #faf0e6; /* Crema cálido */
+            padding: 2vmin; border-radius: 3vmin;
+            box-shadow: 0 1vmin 3vmin rgba(0,0,0,0.1);
+            display: flex; flex-direction: column;
+            border: 0.5vmin solid #5d4037; /* Madera */
+        }
+
+        #timer-box {
+            width: 100%; height: 2vmin; background: #eee;
+            border-radius: 1vmin; overflow: hidden; margin-bottom: 1vmin;
+        }
+        #timer-bar { width: 100%; height: 100%; background: #f44336; transition: width 1s linear; }
+
+        #mission-card {
+            background: #fff3e0; /* Crema más cálido */
+            border: 0.4vmin dashed #ff9800; /* Dorado */
+            padding: 1vmin; border-radius: 2vmin; margin-bottom: 1.5vmin;
+        }
+        #screen {
+            background: #e8f5e9; /* Verde pálido */
+            border: 0.4vmin solid #4caf50; /* Verde Bee-Bot */
+            flex: 1; border-radius: 2vmin; padding: 1vmin; margin-bottom: 1vmin; overflow-y: auto;
+            display: flex; flex-wrap: wrap; gap: 5px;
+        }
+        #screen span { font-size: 3vmin; color: #5d4037; } /* Texto de madera */
+
+        .controls { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1vmin; margin-bottom: 1vmin; justify-items: center; }
+        .cmd-btn {
+            width: 8.5vmin; height: 8.5vmin; font-size: 4vmin; border-radius: 50%; border: none;
+            color: white; cursor: pointer;
+            box-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            transition: transform 0.1s;
+        }
+        .cmd-btn:active { transform: scale(0.9); }
+        .btn-forward { background: #4caf50; grid-column: 2; }
+        .btn-turn-left { background: #ffc107; grid-column: 1; grid-row: 2; }
+        .btn-turn-right { background: #ffc107; grid-column: 3; grid-row: 2; }
+        .btn-backward { background: #f44336; grid-column: 2; grid-row: 3; }
+
+        .action-buttons { display: flex; gap: 1vmin; }
+        .btn-action {
+            flex: 1; padding: 2vmin; font-size: 2vmin; font-weight: bold; border: none;
+            border-radius: 2vmin; color: white; cursor: pointer;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+        }
+
+        @media (orientation: portrait) {
+            #game-screen { flex-direction: column; overflow-y: auto; }
+            #panel { width: 90vw; height: auto; border-top-width: 0.5vmin; }
+            #board { width: 90vw; height: 90vw; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="screen-char" class="overlay-screen">
+        <div class="card">
+            <h1>Elige tu Mariquita</h1>
+            <div class="selection-grid" id="char-list"></div>
+        </div>
+    </div>
+
+    <div id="screen-mode" class="overlay-screen hidden">
+        <div class="card">
+            <h1>Elige el Desafío</h1>
+            <div class="selection-grid">
+                <button class="btn-select" onclick="setMode('easy')"><span>🍃</span><b>Explorador</b><small>Sin arañas</small></button>
+                <button class="btn-select" onclick="setMode('hard')"><span>🕷️</span><b>Supervivencia</b><small>Con arañas</small></button>
+                <button class="btn-select" onclick="setMode('timer')"><span>⏱️</span><b>Desafío Total</b><small>Arañas + 1 Min</small></button>
+            </div>
+        </div>
+    </div>
+
+    <div id="game-screen" class="hidden">
+        <div id="board-container"><div id="board"></div></div>
+        <div id="panel">
+            <div id="timer-box" class="hidden"><div id="timer-bar"></div></div>
+            <div id="mission-card"><p id="mission-text" style="font-size: 3vmin; font-weight: bold; margin:0;"></p></div>
+            <div id="screen"></div>
+            <div class="controls">
+                <button class="cmd-btn btn-forward" onclick="addCommand('forward', '⬆️')">⬆️</button>
+                <button class="cmd-btn btn-turn-left" onclick="addCommand('turnLeft', '⟲')">⟲</button>
+                <button class="cmd-btn btn-turn-right" onclick="addCommand('turnRight', '⟳')">⟳</button>
+                <button class="cmd-btn btn-backward" onclick="addCommand('backward', '⬇️')">⬇️</button>
+            </div>
+            <div class="action-buttons">
+                <button class="btn-action" style="background:#9e9e9e;" onclick="clearCommands()">❌ BORRAR</button>
+                <button class="btn-action" style="background:#2196f3;" onclick="executeCommands()">▶️ GO!</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let pChar = '', pColorClass = '', gameMode = '', gridSize = 5;
+        let botPos = {x:0, y:0}, botRot = 0, initialPos = {x:0, y:0};
+        let targets = [], obstacles = [], currentMission = null;
+        let commands = [], isMoving = false, timerInterval = null, timeLeft = 60;
+
+        // Inicializar selección de mariquitas
+        const chars = [
+            {n:'Roja', c:'m-roja'}, {n:'Verde', c:'m-verde'}, 
+            {n:'Amarilla', c:'m-amarilla'}, {n:'Azul', c:'m-azul'}, {n:'Blanca', c:'m-blanca'}
+        ];
+        const charList = document.getElementById('char-list');
+        chars.forEach(ch => {
+            // Mantenemos los emojis para la selección, pero pasamos la clase de filtro c
+            charList.innerHTML += `<button class="btn-select" onclick="selectChar('🐞','${ch.c}')"><div class="${ch.c}">🐞</div><span>${ch.n}</span></button>`;
+        });
+
+        function selectChar(emoji, color) {
+            // Guardamos el emoji y la clase de color para el robot fotorrealista
+            pChar = emoji; pColorClass = color;
+            document.getElementById('screen-char').classList.add('hidden');
+            document.getElementById('screen-mode').classList.remove('hidden');
+        }
+
+        function setMode(mode) {
+            gameMode = mode;
+            document.getElementById('screen-mode').classList.add('hidden');
+            document.getElementById('game-screen').classList.remove('hidden');
+            if(mode === 'timer') document.getElementById('timer-box').classList.remove('hidden');
+            setupLevel();
+        }
+
+        function setupLevel() {
+            document.documentElement.style.setProperty('--grid-size', gridSize);
+            initialPos = { x: 0, y: gridSize - 1 };
+            botPos = { ...initialPos };
+            botRot = 0;
+            commands = [];
+            obstacles = [];
+            clearInterval(timerInterval);
+            
+            generateMap();
+            if(gameMode === 'timer') startTimer();
+            draw();
+            updateScreen();
+        }
+
+        // --- LÓGICA DE COMPROBACIÓN DE CAMINOS (BFS) ---
+        function hasValidPath() {
+            let queue = [{x: initialPos.x, y: initialPos.y}];
+            let visited = new Set();
+            visited.add(`${initialPos.x},${initialPos.y}`);
+            
+            // Movimientos en cruz (sin diagonales)
+            let directions = [
+                {dx: 0, dy: -1}, // Arriba
+                {dx: 1, dy: 0},  // Derecha
+                {dx: 0, dy: 1},  // Abajo
+                {dx: -1, dy: 0}  // Izquierda
+            ];
+
+            while(queue.length > 0) {
+                let curr = queue.shift();
+                
+                // Si llegamos a la misión, ¡hay un camino válido!
+                if(curr.x === currentMission.x && curr.y === currentMission.y) return true;
+
+                for(let d of directions) {
+                    let nx = curr.x + d.dx;
+                    let ny = curr.y + d.dy;
+
+                    // Comprobar límites del tablero
+                    if(nx >= 0 && nx < gridSize && ny >= 0 && ny < gridSize) {
+                        let key = `${nx},${ny}`;
+                        if(!visited.has(key)) {
+                            // Comprobar si hay araña
+                            if(!obstacles.some(o => o.x === nx && o.y === ny)) {
+                                visited.add(key);
+                                queue.push({x: nx, y: ny});
+                            }
+                        }
+                    }
+                }
+            }
+            return false; // No hay camino
+        }
+
+        function generateMap() {
+            const colors = [
+                {n:'AMARILLA', c:'gold'}, 
+                {n:'ROJA', c:'red'}, 
+                {n:'AZUL', c:'blue'}
+            ];
+            targets = [];
+            
+            // 1. Generar Pelotas
+            colors.forEach(c => {
+                let p; do { p = {x:rand(gridSize), y:rand(gridSize)}; } 
+                while(dist(p, initialPos) < 4 || targets.some(t=>t.x===p.x && t.y===p.y));
+                targets.push({...p, ...c});
+            });
+            currentMission = targets[rand(3)];
+            
+            document.getElementById('mission-text').textContent = `Misión: Pelota ${currentMission.n}`;
+            document.getElementById('mission-text').style.color = currentMission.c;
+
+            // 2. Generar Arañas garantizando que haya camino
+            obstacles = [];
+            if(gameMode !== 'easy') {
+                let isValid = false;
+                
+                while(!isValid) {
+                    obstacles = []; // Reiniciamos los obstáculos si falló la validación
+                    while(obstacles.length < 3) {
+                        let p = {x: rand(gridSize), y: rand(gridSize)};
+                        
+                        let isStart = (p.x === initialPos.x && p.y === initialPos.y);
+                        let isTarget = targets.some(t => t.x === p.x && t.y === p.y);
+                        let isSpider = obstacles.some(o => o.x === p.x && o.y === p.y);
+                        
+                        if(!isStart && !isTarget && !isSpider) {
+                            obstacles.push(p);
+                        }
+                    }
+                    
+                    // Comprobamos si las 3 arañas dejan un camino libre
+                    isValid = hasValidPath();
+                }
+            }
+        }
+
+        function startTimer() {
+            timeLeft = 60;
+            const bar = document.getElementById('timer-bar');
+            bar.style.width = '100%';
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                bar.style.width = (timeLeft/60 * 100) + '%';
+                if(timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    alert("¡Se acabó el tiempo! 🕸️ Las arañas te han atrapado.");
+                    location.reload();
+                }
+            }, 1000);
+        }
+
+        function draw() {
+            const b = document.getElementById('board');
+            b.innerHTML = '';
+            for(let y=0; y<gridSize; y++) {
+                for(let x=0; x<gridSize; x++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    
+                    // Dibujar Pelotas Reales (con degradado)
+                    const t = targets.find(t=>t.x===x && t.y===y);
+                    if(t) {
+                        const targetEl = document.createElement('div');
+                        targetEl.className = 'target';
+                        // Efecto de esfera con degradado radial
+                        targetEl.style.background = `radial-gradient(circle at 30% 30%, #fff, ${t.c} 70%)`;
+                        cell.appendChild(targetEl);
+                    }
+
+                    // Dibujar Arañas Reales (con imagen)
+                    if(obstacles.some(o=>o.x===x && o.y===y)) {
+                        const spiderEl = document.createElement('div');
+                        spiderEl.className = 'spider';
+                        cell.appendChild(spiderEl);
+                    }
+
+                    // Dibujar Personaje Real (con imagen y filtro)
+                    if(x===botPos.x && y===botPos.y) {
+                        const r = document.createElement('div');
+                        // Usamos la clase pColorClass para aplicar el filtro de color
+                        r.className = `robot ${pColorClass} ${getRotCls(botRot)}`;
+                        cell.appendChild(r);
+                    }
+                    b.appendChild(cell);
+                }
+            }
+        }
+
+        function executeCommands() {
+            if(isMoving || !commands.length) return;
+            isMoving = true;
+            botPos = {...initialPos}; botRot = 0;
+            draw(); // Dibujamos al inicio antes de mover
+            
+            let i = 0;
+            const step = setInterval(() => {
+                if(i >= commands.length) {
+                    clearInterval(step); isMoving = false; checkResult(); return;
+                }
+                const c = commands[i].type;
+                if(c === 'turnLeft') botRot = (botRot - 90 + 360) % 360;
+                else if(c === 'turnRight') botRot = (botRot + 90) % 360;
+                else moveBot(c);
+                
+                draw();
+                // Check colisión araña
+                if(obstacles.some(o=>o.x===botPos.x && o.y===botPos.y)) {
+                    clearInterval(step);
+                    setTimeout(() => { alert("¡OH NO! Has chocado con una araña 🕷️"); isMoving = false; clearCommands(); }, 100);
+                    return;
+                }
+                i++;
+            }, 500);
+        }
+
+        function moveBot(type) {
+            const f = (type === 'forward') ? 1 : -1;
+            if(botRot===0 && (f>0?botPos.y>0:botPos.y<gridSize-1)) botPos.y-=f;
+            else if(botRot===90 && (f>0?botPos.x<gridSize-1:botPos.x>0)) botPos.x+=f;
+            else if(botRot===180 && (f>0?botPos.y<gridSize-1:botPos.y>0)) botPos.y+=f;
+            else if(botRot===270 && (f>0?botPos.x>0:botPos.x<gridSize-1)) botPos.x-=f;
+        }
+
+        function checkResult() {
+            if(botPos.x === currentMission.x && botPos.y === currentMission.y) {
+                alert("¡Misión cumplida! 🌟");
+                if(gridSize < 10) gridSize++;
+                setupLevel();
+            } else {
+                alert("No has llegado al destino correcto. Reintenta.");
+            }
+        }
+
+        // Utils
+        const rand = (m) => Math.floor(Math.random()*m);
+        const dist = (p1, p2) => Math.abs(p1.x-p2.x) + Math.abs(p1.y-p2.y);
+        const getRotCls = (d) => ['look-up','look-right','look-down','look-left'][d/90] || 'look-up';
+        function addCommand(t, e) { if(!isMoving) { commands.push({type:t, emoji:e}); updateScreen(); } }
+        function updateScreen() { 
+            const s = document.getElementById('screen');
+            // Usamos emojis para representar comandos en la cola
+            s.innerHTML = commands.map(c => `<span>${c.emoji}</span>`).join('');
+            s.scrollTop = s.scrollHeight;
+        }
+        function clearCommands() { if(!isMoving) { botPos = {...initialPos}; botRot = 0; commands = []; updateScreen(); draw(); } }
+    </script>
+</body>
+</html>
